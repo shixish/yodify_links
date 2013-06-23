@@ -1,0 +1,124 @@
+<?php
+/**
+* Implementation of hook_rules_action_info().
+*/
+function yodify_links_rules_event_info(){
+  return array(
+    'yodify_count_file_download' => array(
+      'group' => t('Yodify'),
+      'label' => t('A yodify file has been downloaded'),
+      'module' => 'yodify_links',
+      'arguments' => array(
+        'file' => array(
+          'type' => 'file',
+          'label' => t('Downloaded file'),
+        ),
+        'user' => array(
+          'type' => 'user',
+          'label' => t('Downloading user'),
+        ),
+      ),
+    ),
+  );
+}
+
+function d($one, $two = null){
+	if (function_exists('dpm'))
+		dpm($one, $two);
+}
+
+/**
+ * Implements hook_menu().
+ */
+function yodify_links_menu() {
+  $items['system/count'] = array(
+		'page callback' => 'yodify_links_view',
+		'access arguments' => array('access content'),
+	);
+	return $items;
+}
+
+function yodify_links_view(){
+	if (isset($_GET['fid']) && isset($_GET['ts'])){
+		$fid = intval($_GET['fid']);
+		$stamp = intval($_GET['ts']);
+		$file = file_load($fid);
+		if ($file->timestamp == $stamp){
+			global $user;
+			rules_invoke_event('yodify_count_file_download', (object) $file, $user);
+			$url = file_create_url($file->uri);
+			drupal_goto($url);
+			return;
+		}
+	}
+	drupal_not_found();
+	return '';
+}
+
+/**
+ * Implements hook_field_formatter_info().
+ */
+function yodify_links_field_formatter_info() {
+  return array(
+    'yodify_links_count' => array(
+      'label' => t('Yodify count clicks'),
+      'field types' => array('file'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function yodify_links_field_formatter_view($entity_type, $entity, $field, $instance, $lang_code, $items, $display) {
+  $element = array();
+  //$entity_info = entity_get_info($entity_type);
+
+  foreach ($items as $delta => $item) {
+    $element[$delta] = array(
+      '#theme' => 'yodify_count_file_field_formatter', //!$access ? 'file_link' : 'download_count_file_field_formatter',
+      '#file' => (object) $item,
+    );
+  }
+  return $element;
+}
+
+
+/**
+ * Implements hook_theme().
+ */
+function yodify_links_theme() {
+  $theme= array(
+    'yodify_count_file_field_formatter' => array(
+			'variables' => array('file' => NULL),
+    ),
+  );
+  return $theme;
+}
+
+function theme_yodify_count_file_field_formatter($variables) {
+  $file = $variables['file'];
+
+  //$url = file_create_url($file->uri);
+	$url = 'system/count';
+  $icon = theme('file_icon', array('file' => $file));
+
+  //$options = array(
+  //  'attributes' => array(
+  //    'type' => $file->filemime . '; length=' . $file->filesize,
+  //  ),
+  //);
+	$options = array('query'=>array('fid'=>$file->fid, 'ts'=>$file->timestamp));
+
+  if (empty($file->description)) {
+    $link_text = $file->filename;
+  }
+  else {
+    $link_text = $file->description;
+    $options['attributes']['title'] = check_plain($file->filename);
+  }
+
+  $output = '<span class="file">' . $icon . ' ' . l($link_text, $url, $options) . '</span>';
+
+  return $output;
+}

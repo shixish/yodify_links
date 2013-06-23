@@ -1,0 +1,11 @@
+; $Id$
+name = Yodify Links
+description = Moderates access to links hosted on S3
+core = 7.x
+
+version = "7.x-1.0"
+core = "7.x"
+package = "Yodify"
+project = "yodify_links"
+datestamp = "1305758218"
+
