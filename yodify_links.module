@@ -22,6 +22,11 @@ function yodify_links_rules_event_info(){
   );
 }
 
+/**
+ * Helper function that wraps devel module's dpm function
+ * Using this function is safer because your code won't
+ *  crash if devel isn't enabled.
+ */
 function d($one, $two = null){
 	if (function_exists('dpm'))
 		dpm($one, $two);
@@ -38,6 +43,9 @@ function yodify_links_menu() {
 	return $items;
 }
 
+/**
+ * Page callback for 'system/count'
+ */
 function yodify_links_view(){
 	if (isset($_GET['fid']) && isset($_GET['ts'])){
 		$fid = intval($_GET['fid']);
@@ -96,18 +104,17 @@ function yodify_links_theme() {
   return $theme;
 }
 
+/**
+ * Theme function used to output the link to our custom menu callback
+ * This redirects the hyperlink through our proxy instead of directly to the file.
+ * See also: theme_file_link
+ */
 function theme_yodify_count_file_field_formatter($variables) {
   $file = $variables['file'];
 
-  //$url = file_create_url($file->uri);
 	$url = 'system/count';
   $icon = theme('file_icon', array('file' => $file));
 
-  //$options = array(
-  //  'attributes' => array(
-  //    'type' => $file->filemime . '; length=' . $file->filesize,
-  //  ),
-  //);
 	$options = array('query'=>array('fid'=>$file->fid, 'ts'=>$file->timestamp));
 
   if (empty($file->description)) {
