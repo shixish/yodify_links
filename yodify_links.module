@@ -28,8 +28,8 @@ function yodify_links_rules_event_info(){
  *  crash if devel isn't enabled.
  */
 function d($one, $two = null){
-	if (function_exists('dpm'))
-		dpm($one, $two);
+  if (function_exists('dpm'))
+    dpm($one, $two);
 }
 
 /**
@@ -37,30 +37,30 @@ function d($one, $two = null){
  */
 function yodify_links_menu() {
   $items['system/count'] = array(
-		'page callback' => 'yodify_links_view',
-		'access arguments' => array('access content'),
-	);
-	return $items;
+    'page callback' => 'yodify_links_view',
+    'access arguments' => array('access content'),
+  );
+  return $items;
 }
 
 /**
  * Page callback for 'system/count'
  */
 function yodify_links_view(){
-	if (isset($_GET['fid']) && isset($_GET['ts'])){
-		$fid = intval($_GET['fid']);
-		$stamp = intval($_GET['ts']);
-		$file = file_load($fid);
-		if ($file->timestamp == $stamp){
-			global $user;
-			rules_invoke_event('yodify_count_file_download', (object) $file, $user);
-			$url = file_create_url($file->uri);
-			drupal_goto($url);
-			return;
-		}
-	}
-	drupal_not_found();
-	return '';
+  if (isset($_GET['fid']) && isset($_GET['ts'])){
+    $fid = intval($_GET['fid']);
+    $stamp = intval($_GET['ts']);
+    $file = file_load($fid);
+    if ($file->timestamp == $stamp){
+      global $user;
+      rules_invoke_event('yodify_count_file_download', (object) $file, $user);
+      $url = file_create_url($file->uri);
+      drupal_goto($url);
+      return;
+    }
+  }
+  drupal_not_found();
+  return '';
 }
 
 /**
@@ -98,7 +98,7 @@ function yodify_links_field_formatter_view($entity_type, $entity, $field, $insta
 function yodify_links_theme() {
   $theme= array(
     'yodify_count_file_field_formatter' => array(
-			'variables' => array('file' => NULL),
+      'variables' => array('file' => NULL),
     ),
   );
   return $theme;
@@ -112,10 +112,10 @@ function yodify_links_theme() {
 function theme_yodify_count_file_field_formatter($variables) {
   $file = $variables['file'];
 
-	$url = 'system/count';
+  $url = 'system/count';
   $icon = theme('file_icon', array('file' => $file));
 
-	$options = array('query'=>array('fid'=>$file->fid, 'ts'=>$file->timestamp));
+  $options = array('query'=>array('fid'=>$file->fid, 'ts'=>$file->timestamp));
 
   if (empty($file->description)) {
     $link_text = $file->filename;
