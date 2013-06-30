@@ -6,20 +6,76 @@ function yodify_links_rules_event_info(){
   return array(
     'yodify_count_file_download' => array(
       'group' => t('Yodify'),
-      'label' => t('A yodify file has been downloaded'),
-      'module' => 'yodify_links',
+      'label' => t('User attempting to download a file'),
       'arguments' => array(
         'file' => array(
           'type' => 'file',
           'label' => t('Downloaded file'),
         ),
-        'user' => array(
-          'type' => 'user',
-          'label' => t('Downloading user'),
-        ),
       ),
+      'module' => 'yodify_links',
     ),
   );
+}
+
+/**
+ * Implementation of hook_rules_condition_info().
+ * @ingroup rules
+ */
+function yodify_links_rules_condition_info() {
+  return array(
+    'yodify_count_file_download_check' => array(
+      'group' => t('Yodify'),
+      'label' => t('Check if the file can be downloaded'),
+      'arguments' => array(
+        'limit' => array(
+          'type' => 'integer',
+          'label' => t('User limit'),
+        ),
+      ),
+      'module' => 'yodify_links',
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_rules_action_info().
+ * @ingroup rules
+ */
+function yodify_links_rules_action_info() {
+  return array(
+    'yodify_count_file_download_redirect' => array(
+      'group' => t('Yodify'),
+      'label' => t('Redirect the user to the actual file'),
+      'module' => 'yodify_links',
+    ),
+    //'yodify_count_file_download_reset' => array(
+    //  'group' => t('Yodify'),
+    //  'label' => t('Reset the user'),
+    //  'module' => 'yodify_links',
+    //),
+  );
+}
+
+
+function yodify_count_file_download_check($limit, $variables, $state){
+  global $user;
+  //note: $user->data starts of == false
+  $file_count = is_array($user->data)&&isset($user->data['file_count'])?$user->data['file_count']:0;
+  return $file_count < $limit;
+}
+
+function yodify_count_file_download_redirect($value, $state){
+  global $user;
+  if (!is_array($user->data))
+    $user->data = array('file_count'=>0);
+  $user->data['file_count']++;//update the file download count...
+  user_save($user);
+  
+  //redirect to the actual file.
+  $file = $state->variables['file'];
+  $url = $file->url->value();
+  drupal_goto($url);
 }
 
 /**
@@ -53,14 +109,11 @@ function yodify_links_view(){
     $file = file_load($fid);
     if ($file->timestamp == $stamp){
       global $user;
-      rules_invoke_event('yodify_count_file_download', (object) $file, $user);
-      $url = file_create_url($file->uri);
-      drupal_goto($url);
-      return;
+      rules_invoke_event('yodify_count_file_download', (object) $file);//Note: this should redirect the user.
     }
   }
-  drupal_not_found();
-  return '';
+  //drupal_not_found();
+  return theme('file_access_limited');//If something goes wrong, just display the custom error message.
 }
 
 /**
@@ -96,9 +149,12 @@ function yodify_links_field_formatter_view($entity_type, $entity, $field, $insta
  * Implements hook_theme().
  */
 function yodify_links_theme() {
-  $theme= array(
+  $theme = array(
     'yodify_count_file_field_formatter' => array(
       'variables' => array('file' => NULL),
+    ),
+    'file_access_limited'=>array(
+      'template'=>'file_access_limited',
     ),
   );
   return $theme;
