@@ -2,6 +2,8 @@
 name = Yodify Links
 description = Moderates access to links hosted on S3
 core = 7.x
+dependencies[] = rules
+dependencies[] = userpoints
 
 version = "7.x-1.0"
 core = "7.x"
