@@ -1,6 +1,4 @@
 <?php
-define('CATEGORY_TID', 2);
-
 /**
 * Implementation of hook_rules_action_info().
 */
@@ -76,16 +74,16 @@ function yodify_count_file_download_redirect($value, $state){
   //Generate a timestamp for 1 month from today.
   $expirydate = mktime(0, 0, 0, date("n")+1);
   $params = array(
-      'uid' => $user->uid,
-      'points' => 1,
-      'tid' => variable_get('yodify_links_category_tid', 0),
-      'expirydate' => $expirydate,
-      'operation' => 'download',
-      'display' => FALSE,
-      'entity_type' => 'file',
-      'entity_id' => $fid,
-    );
-  userpoints_userpointsapi($params);
+    'uid' => $user->uid,
+    'points' => 1,
+    'tid' => variable_get('yodify_links_category_tid', 0),
+    'expirydate' => $expirydate,
+    'operation' => 'download',
+    'display' => FALSE,
+    'entity_type' => 'file',
+    'entity_id' => $fid,
+  );
+  userpoints_userpointsapi($params);//add a download point to the user
   
   //redirect to the actual file.
   $url = $file->url->value();
