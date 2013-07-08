@@ -30,7 +30,8 @@ function yodify_links_rules_condition_info() {
       'arguments' => array(
         'limit' => array(
           'type' => 'integer',
-          'label' => t('User limit'),
+          'label' => t('Download count limit'),
+          'download' => t('The user will only be able to download this many files.')
         ),
       ),
       'module' => 'yodify_links',
@@ -71,8 +72,15 @@ function yodify_count_file_download_redirect($value, $state){
   $file = $state->variables['file'];
   $fid = $file->fid->value();
   
-  //Generate a timestamp for 1 month from today.
-  $expirydate = mktime(0, 0, 0, date("n")+1);
+  //These values come from the module's settings page.
+  $expiration_days = variable_get('yodify_links_expiration_days', 0);
+  $expiration_months = variable_get('yodify_links_expiration_months', 1);
+  
+  //Generate a timestamp offset from today.
+  $expirydate = mktime(0, 0, 0, date("n")+$expiration_months, date("j")+$expiration_days);
+  //d(date("F j, Y, g:i a", time()), 'now');
+  //d(date("F j, Y, g:i a", $expirydate), 'Expiration date');
+  
   $params = array(
     'uid' => $user->uid,
     'points' => 1,
@@ -125,15 +133,49 @@ function yodify_links_admin_settings($form, &$form_state) {
   
   $options = userpoints_get_categories();
   $taxa_url = url('admin/structure/taxonomy/' . taxonomy_vocabulary_load(variable_get(USERPOINTS_CATEGORY_DEFAULT_VID, ''))->machine_name);
-  $form['yodify_links_category_tid'] = array(
+  $form['userpoints'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Userpoints Module Integration',
+  );
+  
+  $form['userpoints']['yodify_links_category_tid'] = array(
     '#type' => 'select',
-    '#title' => t('Download count category (via Userpoints module)'),
+    '#title' => t('Download Count Category'),
     '#default_value' => variable_get('yodify_links_category_tid', 0),
     '#options' => $options,
     '#description' => t('All download counts will be added to this category.  You can modify what categories are available by modifying the <a href="!url">Userpoints taxonomy</a>', array('!url' =>  $taxa_url)),
   );
-
+  
+  $form['expiration'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Expiration Date Setup',
+  );
+  
+  $form['expiration']['yodify_links_expiration_days'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Number of Days'),
+    '#default_value' => variable_get('yodify_links_expiration_days', 0),
+    '#description' => t('The system takes the current date and adds this value to calculate the expiration date.'),
+  );
+  
+  $form['expiration']['yodify_links_expiration_months'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Number of Months'),
+    '#default_value' => variable_get('yodify_links_expiration_months', 1),
+    '#description' => t('The system takes the current month and adds this value to calculate the expiration date.'),
+  );
   return system_settings_form($form);
+}
+
+//Make sure the expiration values are integers, and within a legitimate range
+function yodify_links_admin_settings_validate($form, &$form_state){
+  $days = $form_state['values']['yodify_links_expiration_days'];
+  if ((string)(int)$days != $days)//check if it's an integer
+    form_set_error('yodify_links_expiration_days', 'Expiration days must be an integer.');
+  
+  $months = $form_state['values']['yodify_links_expiration_months'];
+  if ((string)(int)$months != $months || intval($months) < 0)
+    form_set_error('yodify_links_expiration_months', 'Expiration months must be a integer greater than or equal to zero.');
 }
 
 /**
