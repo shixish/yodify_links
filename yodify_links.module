@@ -1,105 +1,5 @@
 <?php
 /**
-* Implementation of hook_rules_action_info().
-*/
-function yodify_links_rules_event_info(){
-  return array(
-    'yodify_count_file_download' => array(
-      'group' => t('Yodify'),
-      'label' => t('User attempting to download a file'),
-      'arguments' => array(
-        'file' => array(
-          'type' => 'file',
-          'label' => t('Downloaded file'),
-        ),
-      ),
-      'module' => 'yodify_links',
-    ),
-  );
-}
-
-/**
- * Implementation of hook_rules_condition_info().
- * @ingroup rules
- */
-function yodify_links_rules_condition_info() {
-  return array(
-    'yodify_count_file_download_check' => array(
-      'group' => t('Yodify'),
-      'label' => t('Check if the file can be downloaded'),
-      'arguments' => array(
-        'limit' => array(
-          'type' => 'integer',
-          'label' => t('Download count limit'),
-          'download' => t('The user will only be able to download this many files.')
-        ),
-      ),
-      'module' => 'yodify_links',
-    ),
-  );
-}
-
-/**
- * Implementation of hook_rules_action_info().
- * @ingroup rules
- */
-function yodify_links_rules_action_info() {
-  return array(
-    'yodify_count_file_download_redirect' => array(
-      'group' => t('Yodify'),
-      'label' => t('Redirect the user to the actual file'),
-      'module' => 'yodify_links',
-    ),
-    //'yodify_count_file_download_reset' => array(
-    //  'group' => t('Yodify'),
-    //  'label' => t('Reset the user'),
-    //  'module' => 'yodify_links',
-    //),
-  );
-}
-
-//Rules condition callback
-function yodify_count_file_download_check($limit, $variables, $state){
-  global $user;
-  $tid = variable_get('yodify_links_category_tid', 0);//default value is zero
-  $points = userpoints_get_current_points($user->uid, $tid);
-  return $points < $limit;
-}
-
-//Rules action callback
-function yodify_count_file_download_redirect($value, $state){
-  global $user;
-  $file = $state->variables['file'];
-  $fid = $file->fid->value();
-  
-  //These values come from the module's settings page.
-  $expiration_days = variable_get('yodify_links_expiration_days', 0);
-  $expiration_months = variable_get('yodify_links_expiration_months', 1);
-  
-  //Generate a timestamp offset from today.
-  $expirydate = mktime(0, 0, 0, date("n")+$expiration_months, date("j")+$expiration_days);
-  //d(date("F j, Y, g:i a", time()), 'now');
-  //d(date("F j, Y, g:i a", $expirydate), 'Expiration date');
-  
-  $params = array(
-    'uid' => $user->uid,
-    'points' => 1,
-    'tid' => variable_get('yodify_links_category_tid', 0),
-    'expirydate' => $expirydate,
-    'operation' => 'download',
-    'display' => FALSE,
-    'entity_type' => 'file',
-    'entity_id' => $fid,
-  );
-  userpoints_userpointsapi($params);//add a download point to the user
-  
-  //redirect to the actual file.
-  $url = $file->url->value();
-  //d($url, 'redirecting to:');
-  drupal_goto($url);
-}
-
-/**
  * Helper function that wraps devel module's dpm function
  * Using this function is safer because your code won't
  *  crash if devel isn't enabled.
@@ -117,65 +17,7 @@ function yodify_links_menu() {
     'page callback' => 'yodify_links_view',
     'access arguments' => array('access content'),
   );
-  $items['admin/config/yodify_links'] = array(
-    'title' => 'Yodify Links module settings',
-    'description' => 'Modify Yodify Links settings',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('yodify_links_admin_settings'),
-    'access arguments' => array('administer userpoints'),
-    'type' => MENU_NORMAL_ITEM,
-   );
   return $items;
-}
-
-function yodify_links_admin_settings($form, &$form_state) {
-  $form = array();
-  
-  $options = userpoints_get_categories();
-  $taxa_url = url('admin/structure/taxonomy/' . taxonomy_vocabulary_load(variable_get(USERPOINTS_CATEGORY_DEFAULT_VID, ''))->machine_name);
-  $form['userpoints'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'Userpoints Module Integration',
-  );
-  
-  $form['userpoints']['yodify_links_category_tid'] = array(
-    '#type' => 'select',
-    '#title' => t('Download Count Category'),
-    '#default_value' => variable_get('yodify_links_category_tid', 0),
-    '#options' => $options,
-    '#description' => t('All download counts will be added to this category.  You can modify what categories are available by modifying the <a href="!url">Userpoints taxonomy</a>', array('!url' =>  $taxa_url)),
-  );
-  
-  $form['expiration'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'Expiration Date Setup',
-  );
-  
-  $form['expiration']['yodify_links_expiration_days'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Number of Days'),
-    '#default_value' => variable_get('yodify_links_expiration_days', 0),
-    '#description' => t('The system takes the current date and adds this value to calculate the expiration date.'),
-  );
-  
-  $form['expiration']['yodify_links_expiration_months'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Number of Months'),
-    '#default_value' => variable_get('yodify_links_expiration_months', 1),
-    '#description' => t('The system takes the current month and adds this value to calculate the expiration date.'),
-  );
-  return system_settings_form($form);
-}
-
-//Make sure the expiration values are integers, and within a legitimate range
-function yodify_links_admin_settings_validate($form, &$form_state){
-  $days = $form_state['values']['yodify_links_expiration_days'];
-  if ((string)(int)$days != $days)//check if it's an integer
-    form_set_error('yodify_links_expiration_days', 'Expiration days must be an integer.');
-  
-  $months = $form_state['values']['yodify_links_expiration_months'];
-  if ((string)(int)$months != $months || intval($months) < 0)
-    form_set_error('yodify_links_expiration_months', 'Expiration months must be a integer greater than or equal to zero.');
 }
 
 /**
@@ -190,7 +32,6 @@ function yodify_links_view(){
       rules_invoke_event('yodify_count_file_download', (object) $file);//Note: this should redirect the user.
     }
   }
-  //drupal_not_found();
   return theme('file_access_limited');//If something goes wrong, just display the custom error message.
 }
 

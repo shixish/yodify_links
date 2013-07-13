@@ -4,6 +4,8 @@ description = Moderates access to links hosted on S3
 core = 7.x
 dependencies[] = rules
 dependencies[] = userpoints
+dependencies[] = userpoints_rules
+files[]=yodify_links.rules.inc
 
 version = "7.x-1.0"
 core = "7.x"
